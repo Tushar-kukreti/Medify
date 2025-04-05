@@ -4,3 +4,6 @@
     color:rgb(2,132,199);
     font-weight:600;
 }
+.active > .line{
+    opacity: 1;
+}
