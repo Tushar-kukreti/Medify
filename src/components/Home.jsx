@@ -25,15 +25,15 @@ const Home = () => {
     }
   }
   return (
-    <div className='pt-8'>
+    <div className=''>
       {/* Hero */}
       <div className='relative'>
           <img src={background}
-          className='w-full h-full object-cover'
+          className='w-full h-full object-cover mt-0'
           alt='background'
           />
 
-          <div className='absolute rounded-2xl top-[10%] left-[15%] w-[70%] bg-[rgb(0,0,0,0.3)]
+          <div className='absolute rounded-2xl top-[10%] left-[15%] w-[70%] bg-black/20
           flex flex-row justify-between items-center py-4 px-8'>
             <div className='flex flex-col justify-center items-start w-[50%] h-full'>
               <h1 className='text-3xl text-white font-bold'>Welcome to HealthCare</h1>
