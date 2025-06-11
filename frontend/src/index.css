@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+.active{
+    color:rgb(2,132,199);
+    font-weight:600;
+}
+.active > .line{
+    opacity: 1;
+}
