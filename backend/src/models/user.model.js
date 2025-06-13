@@ -2,6 +2,7 @@ import mongoose, { Mongoose } from "mongoose";
 import bcrypt from 'bcrypt';
 import { ApiError } from "../utils/ApiError.util.js";
 import jwt from 'jsonwebtoken';
+import { DOCTOR_SPECIALIZATIONS } from "../constants.js";
 
 const userSchema = new mongoose.Schema({
     userName:{
@@ -24,6 +25,20 @@ const userSchema = new mongoose.Schema({
         index: true
     },
     contact_number:Number,
+    groupId:{
+        type: String,
+        enum: ['1','2','3','4','5','6'],
+        required: function(){
+            return this.role === 'doctor';
+        }
+    },
+    specialization:{
+        type: String,
+        enum: DOCTOR_SPECIALIZATIONS,
+        required: function(){
+            return this.role === 'doctor';
+        }
+    },
     password:{
         type: String,
         required: true,

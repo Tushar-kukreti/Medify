@@ -6,6 +6,7 @@ import { COOKIE_MAX_AGE } from '../constants.js'
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import { uploadOnCloudinary } from '../utils/cloudinary.util.js'
+import {SPECIALIZATION_TO_GROUPID} from '../constants.js'
 
 const cookieOptions = {
     httpOnly: true,
@@ -83,13 +84,14 @@ const registerUser = asyncHandler(async (req, res) => {
         }
 
         let {fullName, userName, role, email, password, gender, weight, height, dietary_preference,
-            description, date_of_birth, contact_number, experienceYears} = req.body;
+            description, date_of_birth, contact_number, groupId, specialization, experienceYears} = req.body;
     
         email = email?.trim()?.toLowerCase();
         userName = userName?.trim()?.toLowerCase();
         fullName = fullName?.trim(); gender = gender?.trim();
         dietary_preference = dietary_preference?.trim(); description = description?.trim();
         role = (!role?.trim()) ? "user" : role?.trim();
+        specialization = specialization?.trim()?.toLowerCase();
 
         if ([fullName, email, userName, password, gender].some(
             (field)=> (field == undefined || field === "")))throw new ApiError(400, "Missing User Details");
@@ -109,6 +111,12 @@ const registerUser = asyncHandler(async (req, res) => {
                 throw new ApiError(400, "Certificates are required")
             if (!experienceYears)
                 throw new ApiError(400, "Years of expirence is a required Field for doctors")
+            if (!specialization) throw new ApiError(400, "Specialization is a required Field for doctors");
+            if (!groupId) throw new ApiError(400, "GroupId is a required Field for doctors");
+            console.log("specialization : ", specialization, " groupId : ", groupId, SPECIALIZATION_TO_GROUPID[specialization]);
+            if (SPECIALIZATION_TO_GROUPID[specialization]?.toString() !== groupId.toString()) {
+            throw new ApiError(400, "MISMATCHED SPECIALIZATION AND GROUP ID");
+            }
         }
         const existingUser = await User.findOne(
             {$or: [{email}, {userName}]}
@@ -139,6 +147,7 @@ const registerUser = asyncHandler(async (req, res) => {
             cover: (coverImage) ? coverImage.secure_url : "",
             certifications: certificates,
             experienceYears: experienceYears,
+            contact_number, groupId, specialization
         })
         await user.save({});
     
@@ -305,7 +314,25 @@ const updateAvatarAndCover = asyncHandler(async (req, res) => {
     }
 })
 
+const listDoctors = asyncHandler(async (req, res) => {
+    const groupId = req.query?.groupId?.trim() || null;
+    const specialization = req.query?.specialization?.trim()?.toLowerCase() || null;
+
+    if (groupId && !["1", "2", "3", "4", "5", "6"].includes(groupId)) {
+        throw new ApiError(400, "Invalid Group ID");
+    }
+
+    let filter = {role: 'doctor'};
+    if (specialization) filter.specialization = specialization;
+    if (groupId) filter.groupId = groupId;
+
+    const doctors = await User.find(filter).select("-password -refreshToken -__v");
+    return res
+    .status(200)
+    .json(new ApiResponse(200, "Doctors Fetched Successfully", doctors));
+})
+
 export {
     registerUser, refreshAccessToken, generateTokens, logInUser, logOutUser,
-    getCurrentUser, changePassword, updateDetails, updateAvatarAndCover
+    getCurrentUser, changePassword, updateDetails, updateAvatarAndCover, listDoctors
 };
