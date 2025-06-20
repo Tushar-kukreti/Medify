@@ -1,17 +1,35 @@
 import React , {useState} from 'react'
 import background from '../assets/background_header.jpg'
-import heroImage from '../assets/header_img.png'
+import heroImage from '../assets/hero_section_2.png'
 import TypeEffect from './TypeEffect';
-import { FaAngleDoubleRight } from "react-icons/fa";
+import {colorfulDoctorCategories, fullDesc} from '../constants.js'
+import { FaSearch, FaCalendarCheck, FaAngleDoubleRight, FaUserMd, FaLock } from "react-icons/fa";
+import {MdHealthAndSafety} from "react-icons/md";
+// import { FaUserMd } from 'react-icons/fa';
+import { MdChildCare, MdFaceRetouchingNatural } from 'react-icons/md';
+import { GiBrain, GiHeartOrgan, GiBoneKnife, GiStethoscope } from 'react-icons/gi';
+
+import { broken_bone, medical_team, gynecologist, psychiatrist, bald, stethoscope } from '../assets/Doc/init.js';
 import { useNavigate } from 'react-router-dom';
-import Card from './headerCard';
+import Card from './headerCard.jsx';
+import CircularCard from './CircularCard.jsx';
+import SearchBar from './SearchBar.jsx';
+
+  const features = [
+    { icon: <FaLock />, title: 'Secure & Private', desc: 'Your medical data is safe and encrypted.' },
+    { icon: <FaUserMd />, title: 'Verified Doctors', desc: 'Consult certified professionals across specialties.' },
+    { icon: <FaCalendarCheck />, title: 'Easy Booking', desc: 'Book appointments in seconds.' },
+  ];
+
+  const steps = [
+    { icon: <FaSearch />, label: 'Search a Doctor' },
+    { icon: <FaCalendarCheck />, label: 'Book an Appointment' },
+    { icon: <MdHealthAndSafety />, label: 'Get Treatment' },
+  ];
+
+
 const Home = () => {
   const navigate = useNavigate();
-  const fullDesc = `Manage and share prescriptions securely with our innovative medical app. Effortlessly store
-  and access prescriptions through a user-friendly interface and robust security features. 
-  Enhance communication and streamline workflows for healthcare providers and patients 
-  alike, ensuring accuracy and compliance every step of the way.`
-
   const [descText, setDescText] = useState(fullDesc.slice(0, 100))
   const [isReadMore, setIsReadMore] = useState(false)
   function handleReadMore(){
@@ -24,51 +42,54 @@ const Home = () => {
       setIsReadMore(true)
     }
   }
+
   return (
-    <div className=''>
+    <div className='w-[80%] max-w-[1200px] mb-20 mx-auto relative flex flex-col justify-center items-center'>
       {/* Hero */}
-      <div className='relative'>
-          <img src={background}
-          className='w-full h-full object-cover mt-0'
-          alt='background'
+      <div className='mx-auto flex flex-row justify-center items-center relative'>
+        <div className='flex flex-col justify-center items-start w-[50%] h-full'>
+          <h1 className='text-3xl font-bold'>Welcome to HealthCare</h1>
+          <p className='text-opacity-80 mt-4 text-lg '>Your health is our <TypeEffect/></p>
+          <p className='text-opacity-80 mt-4 text-sm '>
+            {descText}
+            <span className='text-gray-700 cursor-pointer' onClick={handleReadMore}>
+              {isReadMore ? ' Read less' : ' Read more'}
+            </span>
+          </p>
+          <button
+            onClick={() => navigate('/allDoctors')}
+            className="inline-flex items-center mt-4 gap-2 bg-bg_grey hover:opacity-80 text-white font-medium px-6 py-2 rounded-full transition-opacity"
+          >
+            Explore Now <FaAngleDoubleRight />
+          </button>
+
+        </div>
+        <div >
+          <img src={heroImage}
+          className='w-full h-full object-cover'
+          alt='hero'
           />
-
-          <div className='absolute rounded-2xl top-[10%] left-[15%] w-[70%] bg-black/20
-          flex flex-row justify-between items-center py-4 px-8'>
-            <div className='flex flex-col justify-center items-start w-[50%] h-full'>
-              <h1 className='text-3xl text-white font-bold'>Welcome to HealthCare</h1>
-              <p className='text-white text-opacity-80 mt-4 text-lg '>Your health is our <TypeEffect/></p>
-              <p className='text-white text-opacity-80 mt-4 text-sm '>
-                {descText}
-                <span className='text-gray-700 cursor-pointer' onClick={handleReadMore}>
-                  {isReadMore ? ' Read less' : ' Read more'}
-                </span>
-              </p>
-              <button
-              onClick={() => navigate('/allDoctors')}
-              type='button'
-              className='px-4 py-2 mt-8 flex items-center gap-2 text-white bg-gray-600 duration-200 rounded-2xl text-md transition-opacity hover:bg-gray-800'
-              >
-              <span>Explore Now</span> <span className=''><FaAngleDoubleRight /></span>
-            </button>
-            </div>
-            <div >
-              <img src={heroImage}
-              className='w-full h-full object-cover'
-              alt='hero'
-              />
-            </div>
-
-          </div>
+        </div>
       </div>
 
-      {/* Header Cards */}
-      <div className='flex flex-col justify-center items-center py-8 w-full'>
-        <Card/>
+      {/* Why choose section */}
+      <div className='w-[85%] mt-4'>
+        <Card title={"Why Choose Medify?"} data={features}/>
+      </div>
+      {/* <DoctorGroups/> */}
+      <div className='w-[85%] mt-4'>
+        <CircularCard title={'Find Doctors By Category'} data={colorfulDoctorCategories}/>
       </div>
 
+      {/* Search Doctors Section */}
+      <div className='w-[85%] mt-4'>
+        <div className='flex flex-col justify-center items-center mb-4'>
+          <h2 className='text-2xl font-bold'>Search Doctors</h2>
+          <p className='text-gray-600 text-sm'>Find the best doctors for your needs</p>
+        </div>
+        <SearchBar/>
+      </div>
     </div>
-
   )
 }
 

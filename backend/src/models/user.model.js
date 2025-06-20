@@ -10,24 +10,23 @@ const userSchema = new mongoose.Schema({
         required: true,
         unique: true,
         trim: true,
-        index: true,
     },
     fullName:{
         type:String,
         required:true,
         trim: true,
+        index: true,
     },
     email:{
         type:String,
         required:true,
         unique: true,
         trim: true,
-        index: true
     },
     contact_number:Number,
     groupId:{
         type: String,
-        enum: ['1','2','3','4','5','6'],
+        enum: ['0','1','2','3','4','5','6'],
         required: function(){
             return this.role === 'doctor';
         }
@@ -51,6 +50,18 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ['user', 'doctor'],
         default: 'user',
+    },
+    AppointmentFee: {
+        type: Number,
+        required: function() {
+            return this.role === 'doctor';
+        }
+    },
+    certificationsName:{
+        type: String,
+        required: function() {
+            return this.role === 'doctor';
+        }
     },
     certifications:{
         type: [String],

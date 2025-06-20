@@ -5,7 +5,8 @@ import { User } from '../models/user.model.js';
 
 export const verifyJWT = asyncHandler(async(req,_,next)=>{
     try{
-        const token = req.cookies?.accessToken || req.headers['Authorization']?.replace("Bearer ", "").trim();
+        const token = req.cookies?.accessToken || req.headers['authorization']?.replace("Bearer ", "").trim() || req.headers['Authorization']?.replace("Bearer ", "").trim();
+        console.log("Token from request:", token);
         if (!token) throw new ApiError(401, "User Token not found");
 
         const decodedUser = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
@@ -17,6 +18,6 @@ export const verifyJWT = asyncHandler(async(req,_,next)=>{
         req.user = user;
         next();
     } catch(err){
-        next(new ApiError(401, "Unauthorized : "));
+        next(new ApiError(401, (err.message || "Unauthorized : "), err));
     }
 })

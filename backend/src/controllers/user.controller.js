@@ -9,10 +9,12 @@ import { uploadOnCloudinary } from '../utils/cloudinary.util.js'
 import {SPECIALIZATION_TO_GROUPID} from '../constants.js'
 
 const cookieOptions = {
-    httpOnly: true,
-    secure: true,
-    maxAge: COOKIE_MAX_AGE
-}
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+  maxAge: COOKIE_MAX_AGE,
+};
+console.log("Cookie Options : ", cookieOptions);
 
 const generateTokens = async(userId)=>{
     try{
@@ -29,6 +31,9 @@ const generateTokens = async(userId)=>{
 
 const refreshAccessToken = asyncHandler(async(req, res)=>{
     const incommingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+    console.log("Incomming Refresh Token : ", incommingRefreshToken);
+    console.log('cookies : ', req.cookies);
+    console.log('headers : ', req.headers);
     if (!incommingRefreshToken) throw new ApiError(401, "Refresh Token not found");
 
     try{
@@ -83,8 +88,8 @@ const registerUser = asyncHandler(async (req, res) => {
             }
         }
 
-        let {fullName, userName, role, email, password, gender, weight, height, dietary_preference,
-            description, date_of_birth, contact_number, groupId, specialization, experienceYears} = req.body;
+        let {fullName, userName, role, email, password, gender, weight, height, dietary_preference,AppointmentFee,
+            description, date_of_birth, contact_number, groupId, specialization, experience:experienceYears, certificationsName} = req.body;
     
         email = email?.trim()?.toLowerCase();
         userName = userName?.trim()?.toLowerCase();
@@ -93,6 +98,7 @@ const registerUser = asyncHandler(async (req, res) => {
         role = (!role?.trim()) ? "user" : role?.trim();
         specialization = specialization?.trim()?.toLowerCase();
 
+        console.log("fullName : ", fullName, " userName : ", userName, " email : ", email, date_of_birth);
         if ([fullName, email, userName, password, gender].some(
             (field)=> (field == undefined || field === "")))throw new ApiError(400, "Missing User Details");
     
@@ -104,6 +110,16 @@ const registerUser = asyncHandler(async (req, res) => {
 
         description = (description) ? description : "";
         dietary_preference = (dietary_preference) ? dietary_preference : "";
+
+        const existingUser = await User.findOne(
+            {$or: [{email}, {userName}]}
+        )
+    
+        if (existingUser){
+            if (coverLocalPath) try{fs.unlinkSync(coverLocalPath)}catch{};
+            if (avatarLocalPath) try{fs.unlinkSync(avatarLocalPath)}catch{};
+            throw new ApiError(400, 'User Already Exist');
+        }
     
 
         if (role === 'doctor'){
@@ -117,17 +133,12 @@ const registerUser = asyncHandler(async (req, res) => {
             if (SPECIALIZATION_TO_GROUPID[specialization]?.toString() !== groupId.toString()) {
             throw new ApiError(400, "MISMATCHED SPECIALIZATION AND GROUP ID");
             }
+            if (!certificationsName || certificationsName === '') 
+                throw new ApiError(400, "Missing Certificates Name");
+            if (!AppointmentFee || AppointmentFee === '') throw new ApiError(400, "Missing Appointment Fee Details");
+            AppointmentFee = Number(AppointmentFee);
         }
-        const existingUser = await User.findOne(
-            {$or: [{email}, {userName}]}
-        )
-    
-        if (existingUser){
-            if (coverLocalPath) try{fs.unlinkSync(coverLocalPath)}catch{};
-            if (avatarLocalPath) try{fs.unlinkSync(avatarLocalPath)}catch{};
-            throw new ApiError(400, 'User Already Exist');
-        }
-    
+
         const avatarImage = (avatarLocalPath) ? await uploadOnCloudinary(avatarLocalPath, "avatar") : null;
         const coverImage = (coverLocalPath) ? await uploadOnCloudinary(coverLocalPath, "cover") : null;
         
@@ -147,10 +158,18 @@ const registerUser = asyncHandler(async (req, res) => {
             cover: (coverImage) ? coverImage.secure_url : "",
             certifications: certificates,
             experienceYears: experienceYears,
-            contact_number, groupId, specialization
+            contact_number, groupId, specialization, certificationsName, AppointmentFee,
         })
-        await user.save({});
-    
+        try {
+            await user.save();
+        } catch (err) {
+        if (err.code === 11000) {
+            const field = Object.keys(err.keyPattern)[0];
+            throw new ApiError(409, `Duplicate ${field}: "${err.keyValue[field]}" already exists.`);
+        }
+        throw new ApiError(500, "User creation failed", err);
+        }
+
         const createdUser = await User.findById(user._id).select("-password -refreshToken");
         if (!createdUser) throw new ApiError(500, "Failed to create user");
         
@@ -332,7 +351,76 @@ const listDoctors = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, "Doctors Fetched Successfully", doctors));
 })
 
+const searchDoctor = asyncHandler(async (req, res) => {
+    const doctorId = req.query?.id?.trim();
+    console.log("Doctor id : ", doctorId);
+    if (!doctorId || doctorId === '') throw new ApiError(400, "Invalid Doctor Id");
+
+    const doctor = await User.findById(doctorId).select("-password -refreshToken -__v");
+    if (!doctor) throw new ApiError(404, "Doctor Not Found");
+    if (doctor.role !== 'doctor') throw new ApiError(401, "Search Is only applicable for Doctors");
+
+    console.log(doctor);
+    return res
+    .status(200)
+    .json(new ApiResponse(200, "Doctors Details Fetched Successfully.", doctor));
+});
+
+const filterDoctors = asyncHandler(async (req, res) => {
+    const {groupId,specialization,name,page = 1,limit = 10,sortBy = "fullName",order = "asc"} = req.query;
+
+    if (groupId && !["1", "2", "3", "4", "5", "6"].includes(groupId)) {
+        throw new ApiError(400, "Invalid Group ID");
+    }
+
+    const filter = { role: 'doctor' };
+
+    if (specialization) {
+        filter.specialization = specialization.trim().toLowerCase();
+    }
+
+    if (groupId) {
+        filter.groupId = groupId.trim();
+    }
+
+    if (name?.trim()) {
+        const terms = name.trim().split(/\s+/);
+        const regexes = terms.map(term => new RegExp(term, 'i'));
+
+        filter.$and = regexes.map(regex => ({
+            fullName: { $regex: regex }
+        }));
+    }
+
+    const sortOrder = order === "desc" ? -1 : 1;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [doctors, total] = await Promise.all([
+        User.find(filter)
+            .select("-password -refreshToken -__v")
+            .sort({ [sortBy]: sortOrder })
+            .skip(skip)
+            .limit(parseInt(limit)),
+        User.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return res.status(200).json(
+        new ApiResponse(200, "Doctors fetched successfully", {
+            doctors,
+            pagination: {
+                total,
+                totalPages,
+                currentPage: parseInt(page),
+                limit: parseInt(limit),
+            }
+        })
+    );
+});
+
 export {
     registerUser, refreshAccessToken, generateTokens, logInUser, logOutUser,
-    getCurrentUser, changePassword, updateDetails, updateAvatarAndCover, listDoctors
+    getCurrentUser, changePassword, updateDetails, updateAvatarAndCover, listDoctors, searchDoctor, filterDoctors
 };

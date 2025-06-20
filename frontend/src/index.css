@@ -1,9 +1,35 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
+@theme {
+  --color-bg_white:   #fcfffd;
+  --color-bg_light_sky: #daffef;
+  --color-bg_dim_sky:   #c0fdfb;
+  --color-bg_sky:       #64b6ac;
+  --color-bg_grey:      #5d737e;
+}
+@theme {  --font-display: "Boldonse", "sans-serif"; }
+
+body{
+    overflow-x: hidden;
+    @apply bg-bg_light_sky text-bg_grey
+}
+
 .active{
     color:rgb(2,132,199);
     font-weight:600;
 }
 .active > .line{
     opacity: 1;
+}
+
+.input-style {
+  @apply w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300;
+}
+
+.btn-primary {
+  @apply w-full bg-blue-500 text-white py-2 rounded-xl hover:bg-blue-600 transition;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 text-gray-800 px-4 py-2 rounded-xl hover:bg-gray-300;
 }

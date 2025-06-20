@@ -1,6 +1,7 @@
 export const DB_NAME = 'medify';
 export const COOKIE_MAX_AGE = 7*24*60*60*1000
 export const DOCTOR_SPECIALIZATIONS = [
+  "none",
   "acupuncturist",
   "allergist/immunologist",
   "andrologist",
