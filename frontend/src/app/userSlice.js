@@ -11,7 +11,8 @@ const LOGIN_URL    = `${API_BASE}/login`;
 const LOGOUT_URL   = `${API_BASE}/logout`;
 const USER_URL     = `${API_BASE}/currentUser`;
 const REFRESH_URL  = `${API_BASE}/refreshAccessToken`;
-
+const UPDATE_USER_URL = `${API_BASE}/update`;
+const CHANGE_PASSWORD_URL = `${API_BASE}/changePassword`;
 // Helper to pull out a clean message
 const extractErrorMessage = (err) => {
   if (err?.response?.data?.message) {
@@ -98,9 +99,11 @@ export const fetchUser = createAsyncThunk(
         USER_URL,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      // toast.success("Fetched User", { position: "bottom-left" });
       return res.data.data;
     } catch (err) {
       const msg = extractErrorMessage(err);
+      // toast.error(msg, { position: "bottom-left" });
       return rejectWithValue(msg);
     }
   }
@@ -123,6 +126,56 @@ export const logOutUser = createAsyncThunk(
     } catch (err) {
       const msg = extractErrorMessage(err);
       toast.error(msg, { position: "bottom-left" });
+      return rejectWithValue(msg);
+    }
+  }
+);
+
+const CHANGE_PASSWORD_ENDPOINT = "/change-password";
+
+// ─────────────────────────────────────────────────────────────────────────────
+export const changePassword = createAsyncThunk(
+  "user/changePassword",
+  async ({ oldPassword, newPassword }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(
+        CHANGE_PASSWORD_URL,
+        { oldPassword, newPassword },
+        { withCredentials: true }
+      );
+      toast.success(response.data.message || "Password changed successfully.");
+      return response.data;
+    } catch (err) {
+      const message = err.response?.data?.message || "Failed to change password.";
+      toast.error(message);
+      return rejectWithValue(message);
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+export const updateUserDetails = createAsyncThunk(
+  "user/updateUserDetails",
+  async (userData, { rejectWithValue }) => {
+    try {
+      const cleanedData = Object.fromEntries(
+        Object.entries(userData).filter(
+          ([_, value]) => value !== null && value !== undefined && value !== ""
+        )
+      );
+
+      const res = await axios.patch(
+        UPDATE_USER_URL,
+        cleanedData,
+        { withCredentials: true }
+      );
+
+      toast.success("Profile updated successfully");
+      return res.data.data; // updated user
+    } catch (err) {
+      const msg =
+        err.response?.data?.message || "Failed to update profile";
+      toast.error(msg);
       return rejectWithValue(msg);
     }
   }
@@ -204,6 +257,33 @@ const userSlice = createSlice({
         state.error = action.payload;
         state.userInfo = null;
         state.isLoggedIn = false;
+      })
+      // UPDATE_USER_DETAILS
+      .addCase(updateUserDetails.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(updateUserDetails.fulfilled, (state, action) => {
+        state.loading = false;
+        state.userInfo = action.payload;
+      })
+      .addCase(updateUserDetails.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Password change cases
+      .addCase(changePassword.pending, (state) => {
+        state.changePasswordLoading = true;
+        state.changePasswordError = null;
+        state.changePasswordSuccess = false;
+      })
+      .addCase(changePassword.fulfilled, (state) => {
+        state.changePasswordLoading = false;
+        state.changePasswordSuccess = true;
+      })
+      .addCase(changePassword.rejected, (state, action) => {
+        state.changePasswordLoading = false;
+        state.changePasswordError = action.payload;
+        state.changePasswordSuccess = false;
       });
   },
 });

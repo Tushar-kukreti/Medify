@@ -1,4 +1,4 @@
-import React , {useState} from 'react'
+import React , {useEffect, useState} from 'react'
 import background from '../assets/background_header.jpg'
 import heroImage from '../assets/hero_section_2.png'
 import TypeEffect from './TypeEffect';
@@ -6,14 +6,12 @@ import {colorfulDoctorCategories, fullDesc} from '../constants.js'
 import { FaSearch, FaCalendarCheck, FaAngleDoubleRight, FaUserMd, FaLock } from "react-icons/fa";
 import {MdHealthAndSafety} from "react-icons/md";
 // import { FaUserMd } from 'react-icons/fa';
-import { MdChildCare, MdFaceRetouchingNatural } from 'react-icons/md';
-import { GiBrain, GiHeartOrgan, GiBoneKnife, GiStethoscope } from 'react-icons/gi';
-
-import { broken_bone, medical_team, gynecologist, psychiatrist, bald, stethoscope } from '../assets/Doc/init.js';
+import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import Card from './headerCard.jsx';
 import CircularCard from './CircularCard.jsx';
 import SearchBar from './SearchBar.jsx';
+import Loading from './Loading.jsx';
 
   const features = [
     { icon: <FaLock />, title: 'Secure & Private', desc: 'Your medical data is safe and encrypted.' },
@@ -42,9 +40,10 @@ const Home = () => {
       setIsReadMore(true)
     }
   }
-
+  const { userInfo } = useSelector((state) => state.user);
   return (
-    <div className='w-[80%] max-w-[1200px] mb-20 mx-auto relative flex flex-col justify-center items-center'>
+    (!userInfo || userInfo.role === 'user') ? 
+    (<div className='w-[80%] max-w-[1200px] mb-20 mx-auto relative flex flex-col justify-center items-center'>
       {/* Hero */}
       <div className='mx-auto flex flex-row justify-center items-center relative'>
         <div className='flex flex-col justify-center items-start w-[50%] h-full'>
@@ -81,15 +80,7 @@ const Home = () => {
         <CircularCard title={'Find Doctors By Category'} data={colorfulDoctorCategories}/>
       </div>
 
-      {/* Search Doctors Section */}
-      <div className='w-[85%] mt-4'>
-        <div className='flex flex-col justify-center items-center mb-4'>
-          <h2 className='text-2xl font-bold'>Search Doctors</h2>
-          <p className='text-gray-600 text-sm'>Find the best doctors for your needs</p>
-        </div>
-        <SearchBar/>
-      </div>
-    </div>
+    </div>) : (<Loading isLoading={0} text="Unauthorised Access To Page"/>)
   )
 }
 

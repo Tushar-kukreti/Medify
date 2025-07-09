@@ -15,6 +15,10 @@ import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUser, refreshAccessToken } from "./app/userSlice.js";
 import "react-toastify/dist/ReactToastify.css";
+import DoctorDashBoard from "./components/DoctorDashBoard.jsx";
+import DoctorAppointment from "./components/DoctorAppointments.jsx";
+import ProfilePage from "./components/Profile.jsx";
+import ChangePasswordPage from "./components/ChangePasswordPage.jsx";
 
 function App() {
   const dispatch = useDispatch();
@@ -51,6 +55,10 @@ function App() {
           <Route path="/allDoctors" element = {<AllDoctors/>}></Route>
           <Route path="/contact" element = {<Contact/>}></Route>
           <Route path="/login" element = {<LogIn/>}></Route>
+          <Route path="/dashboard" element = {<DoctorDashBoard/>}></Route>
+          <Route path="/appointments" element = {<DoctorAppointment/>}></Route>
+          <Route path="/profile" element = {<ProfilePage/>}></Route>
+          <Route path="/change-password" element={< ChangePasswordPage/>} />
           <Route path="/doctor/:id" element={<DoctorDetails />} />
         </Route>
         </Routes>

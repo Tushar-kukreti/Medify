@@ -11,6 +11,8 @@ function Navbar() {
   const [theme, setTheme] = useState("light");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const { userInfo } = useSelector((state) => state.user);
+  const userNav = ["/", "/allDoctors", "/about", "/contact"];
+  const doctorNav = ["/dashBoard", "/appointments", "/about", "/contact"];
   const dropdownRef = useRef();
   const dispatch = useDispatch();
   useEffect(() => {
@@ -64,46 +66,47 @@ function Navbar() {
           </div>)
   }
 
-const AccountBtn = () =>{
-    return (
-        <div className="relative">
-            <button
-            onClick={() => setDropdownOpen((prev) => !prev)}
-            className="px-2 py-2 text-bg_white bg-bg_grey duration-200 rounded-full text-sm transition-opacity hover:opacity-75"
-            >
-            <MdAccountCircle className="text-2xl" />
-            </button>
-    
-            {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-36 bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden z-50 animate-fade-in-up">
-                <button
-                onClick={() => {
-                    navigate("/profile");
-                    setDropdownOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
-                >
-                Profile
-                </button>
-                <button
-                onClick={() => {
-                    dispatch(logOutUser())
-                    .then(()=>{
-                      toast.success("Logout Successful.", { position: "bottom-left" });
-                    }).catch((error) => {
-                      toast.error(error.message || "Registration failed", { position: "bottom-left" });
-                    });
-                    setDropdownOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
-                >
-                Logout
-                </button>
-            </div>
-            )}
-        </div>
-    )
-}
+  const AccountBtn = () =>{
+      return (
+          <div className="relative">
+              <button
+              onClick={() => setDropdownOpen((prev) => !prev)}
+              className="px-2 py-2 text-bg_white bg-bg_grey duration-200 rounded-full text-sm transition-opacity hover:opacity-75"
+              >
+              <MdAccountCircle className="text-2xl" />
+              </button>
+      
+              {dropdownOpen && (
+              <div className="absolute right-0 mt-2 w-36 bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden z-50 animate-fade-in-up">
+                  <button
+                  onClick={() => {
+                      navigate("/profile");
+                      setDropdownOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                  >
+                  Profile
+                  </button>
+                  <button
+                  onClick={() => {
+                      dispatch(logOutUser())
+                      .then(()=>{
+                        navigate("/");
+                        toast.success("Logout Successful.", { position: "bottom-left" });
+                      }).catch((error) => {
+                        toast.error(error.message || "Registration failed", { position: "bottom-left" });
+                      });
+                      setDropdownOpen(false);
+                    }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                  >
+                  Logout
+                  </button>
+              </div>
+              )}
+          </div>
+      )
+  }
 
   return (
     <div className="fixed top-0 left-0 right-0 bg-bg_white dark:bg-gray-400 dark:text-bg_white z-50">
@@ -115,7 +118,8 @@ const AccountBtn = () =>{
 
         {/* Routes */}
         <nav className="flex gap-6 list-none">
-          {["/", "/allDoctors", "/about", "/contact"].map((path, i) => (
+          {
+          ((userInfo && userInfo.role === 'doctor') ? doctorNav : userNav).map((path, i) => (
             <NavLink
               key={i}
               to={path}

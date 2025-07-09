@@ -1,7 +1,13 @@
 import React from 'react'
 import { nature4, christmasDecor4 } from '../assets/Doc/init'
+import { useNavigate } from 'react-router-dom'
 
 const CircularCard = ({title, data}) => {
+  const navigate = useNavigate();
+  const handleClick = () => {
+    navigate('/allDoctors');
+  }
+
   return (
     <div className='relative z-10 mx-auto bg-bg_white rounded-2xl shadow-md p-6 flex flex-col items-center w-full max-w-7xl'>
       <h3 className="font-bold text-xl">{title}</h3>
@@ -10,7 +16,8 @@ const CircularCard = ({title, data}) => {
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 z-10 opacity-80'>
         {data.map((item, index) => (
           <div key={index} className='relative flex flex-col items-center justify-center bg-white shadow-lg w-55 h-55 rounded-full p-6 hover:shadow-xl duration-300
-          cursor-pointer hover:opacity-80 overflow-hidden transition-all group'>
+          cursor-pointer hover:opacity-80 overflow-hidden transition-all group'
+          onClick={handleClick}>
             <div className='absolute z-15 mx-auto rounded-full w-full h-full top-0 left-0 opacity-30
              bg-gradient-to-t from-bg_grey to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out
             '></div>

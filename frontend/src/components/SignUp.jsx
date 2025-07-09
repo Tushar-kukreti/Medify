@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { doctor_banner1, doctor_banner2, doctor_banner3 } from "../assets/Doc/init";
 import { ImFolderUpload } from "react-icons/im";
@@ -37,10 +37,17 @@ const RegistrationForm = () => {
     cover: null,
     certificate: [],
     certificationsName: "",
+    AppointmentFee: 0,
     specialization: "none",
     experience: "",
     groupId: "0",
   });
+
+
+  useEffect(()=>{
+    if (userInfo) navigate('/');
+  })
+  
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
@@ -306,6 +313,7 @@ const RegistrationForm = () => {
           {showError("specialization")}
 
           {renderInput("experience", "Years of Experience", "number")}
+          {renderInput("AppointmentFee", "How Much Will You Charge Per Appointment", "number")}
           {renderInput("certificationsName", "Certificates Name")}
           {renderFile("certificate", "Upload Certificates", true)}
         </>

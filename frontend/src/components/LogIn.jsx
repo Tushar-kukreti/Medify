@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { doctor_banner1, doctor_banner2, doctor_banner3 } from "../assets/Doc/init";
 import { useDispatch, useSelector } from "react-redux";
@@ -16,7 +16,11 @@ const LoginPage = () => {
   const [errors, setErrors] = useState({});
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error } = useSelector((state) => state.user);
+  const { userInfo, loading, error } = useSelector((state) => state.user);
+
+  useEffect(()=>{
+    if (userInfo) navigate('/');
+  })
 
   const handleSubmit = (e) => {
     e.preventDefault();
