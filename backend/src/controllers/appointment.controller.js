@@ -59,106 +59,153 @@ export const autoCompleteAppointments = () => {
 };
 
 const createAppointment = asyncHandler(async (req, res) => {
-    let {slotId, reason, note} = req.body;
-    if (!slotId) throw new ApiError(400, "Slot id is required");
-        console.log("slotId : ", slotId);
-    slotId = slotId.trim();
+  const { slotId, reason = "", note = "" } = req.body;
+  if (!slotId) throw new ApiError(400, "Slot id is required");
 
-    if (!mongoose.Types.ObjectId.isValid(slotId))
-        throw new ApiError(400, "Invalid Slot id");
+  if (!mongoose.Types.ObjectId.isValid(slotId))
+    throw new ApiError(400, "Invalid Slot id");
 
-    const patient = await User.findById(req?.user?._id);
-    if (!patient) throw new ApiError(404, "User not found");
+  const patient = await User.findById(req.user._id);
+  if (!patient) throw new ApiError(404, "User not found");
 
-    const slot = await TimeSlot.findById(slotId);
-    if (!slot) throw new ApiError(404, "Slot not found");
-    if (slot?.isBooked) throw new ApiError(401, "Slot is already booked");
+  const slot = await TimeSlot.findById(slotId);
+  if (!slot) throw new ApiError(404, "Slot not found");
+  if (slot.isBooked) throw new ApiError(409, "Slot is already booked");
 
-    const appointment = await Appointment.create({
-        doctor: slot?.doctor,
-        patient: patient._id,
-        timeSlot: slot._id,
-        reason: (reason || ""),
-        note: (note || ""),
-        status: "Scheduled",
-    })
+  const [appointment] = await Promise.all([
+    Appointment.create({
+      doctor: slot.doctor,
+      patient: patient._id,
+      timeSlot: slot._id,
+      reason,
+      note,
+      status: "Scheduled",
+    }),
 
-    slot.isBooked = true;
-    slot.bookedBy = patient._id;
-    await slot.save();
+    (async () => {
+      slot.isBooked = true;
+      slot.bookedBy = patient._id;
+      await slot.save();
+    })(),
+  ]);
 
-    return res
-    .status(200)
-    .json(new ApiResponse(200, "Successfully Booked appointment", {}));
-})
-
+  return res
+    .status(201)
+    .json(new ApiResponse(201, "Successfully booked appointment", { appointment }));
+});
 const getAllAppointments = asyncHandler(async (req, res) => {
-    const userId = req?.user?._id;
-    const role = req?.user?.role;
-    if (!userId || !role) throw new ApiError(400, "Invalid User");
+  const userId = req.user._id;
+  const role = req.user.role;
+  if (!userId || !role) throw new ApiError(400, "Invalid User");
 
-    let status = req?.query?.status;
-    status = (status) ? status.trim() : "";
-    let filter = (role === 'doctor') ? {doctor:userId} : {patient:userId};
-    if (status && status !== "") filter.status = status;
+  const { status = "", page = 1, limit = 10, date } = req.query;
 
-    const page = parseInt(req?.query?.page) || 1;
-    const limit = parseInt(req?.query?.limit) || 10;
-    const skip = (page - 1) * limit;
-    
-    const response = await Appointment.find(filter)
-    .populate('doctor', "fullName _id email")
-    .populate('patient', "fullName _id email")
-    .populate('timeSlot')
-    .sort({created:-1})
-    .skip(skip)
-    .limit(limit);
+  const filter = {
+    ...(role === "doctor" ? { doctor: userId } : { patient: userId }),
+  };
 
-    const totalCount = await Appointment.countDocuments(filter);
-    return res
-    .status(200)
-    .json(new ApiResponse(200, "Successfully fetched all appointment.", {
-        response,
-        totalCount,
-        totalPages: Math.ceil(totalCount/limit),
-        currentPage: page,
-    }));
-})
-const cancelAppointment = asyncHandler(async (req, res) => {
-  const appointmentIds = req?.body?.appointment;
-  if (!appointmentIds || !Array.isArray(appointmentIds) || appointmentIds.length === 0) {
-    throw new ApiError(400, "Invalid or empty appointment array.");
+  // Add status filter if provided
+  if (status) {
+    const allStatuses = status.split(",").map((s) => s.trim());
+    filter.status = { $in: allStatuses };
   }
 
-  const user = await User.findById(req?.user?._id);
-  if (!user) throw new ApiError(404, "User not found");
+  // Add date filter if provided
+  if (date) {
+    const queryDate = new Date(date);
+    if (isNaN(queryDate.getTime())) {
+      throw new ApiError(400, "Invalid date format. Use YYYY-MM-DD.");
+    }
 
-  const appointments = await Appointment.find({ _id: { $in: appointmentIds } }).populate('timeSlot');
+    const startOfDay = new Date(queryDate);
+    startOfDay.setHours(0, 0, 0, 0);
 
-  console.log(appointments, appointmentIds);
-  if (appointments.length !== appointmentIds.length) {
-    throw new ApiError(404, "Some appointments were not found.");
-  }
+    const endOfDay = new Date(queryDate);
+    endOfDay.setHours(23, 59, 59, 999);
 
-  for (const appt of appointments) {
-    if (!appt.timeSlot) continue; // Just in case
-
-    // Add slot time info to appointment for history
-    appt.status = 'Cancelled';
-    appt.cancelledSlotInfo = {
-      date: appt.timeSlot.date,
-      startTime: appt.timeSlot.startTime,
-      endTime: appt.timeSlot.endTime,
+    filter.date = {
+      $gte: startOfDay,
+      $lte: endOfDay,
     };
-    await appt.save();
 
-    // Delete the associated timeslot
-    await TimeSlot.findByIdAndDelete(appt.timeSlot._id);
+    console.log('Filtering by date from:', startOfDay.toISOString(), 'to', endOfDay.toISOString());
+  } else {
+    console.log('No date filter applied');
   }
+
+  const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+  const [appointments, totalCount] = await Promise.all([
+    Appointment.find(filter)
+      .populate("doctor", "fullName email")
+      .populate("patient", "fullName email")
+      .populate("timeSlot")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit, 10)),
+
+    Appointment.countDocuments(filter),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / parseInt(limit, 10));
 
   return res.status(200).json(
-    new ApiResponse(200, "Successfully cancelled all the appointments and deleted related slots.")
+    new ApiResponse(200, "Fetched appointments", {
+      appointments,
+      pagination: {
+        totalCount,
+        totalPages,
+        currentPage: parseInt(page, 10),
+      },
+    })
   );
+});
+
+
+const cancelAppointment = asyncHandler(async (req, res) => {
+  const appointmentIds = req.body.appointment;
+  if (!Array.isArray(appointmentIds) || appointmentIds.length === 0)
+    throw new ApiError(400, "Invalid or empty appointment array");
+
+  const user = await User.findById(req.user._id);
+  if (!user) throw new ApiError(404, "User not found");
+
+  const appointments = await Appointment.find({ _id: { $in: appointmentIds } })
+    .populate("timeSlot");
+
+  if (appointments.length !== appointmentIds.length)
+    throw new ApiError(404, "Some appointments were not found");
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    for (const appt of appointments) {
+      // Only allow cancel by doctor or patient
+      if (![appt.doctor.toString(), appt.patient.toString()].includes(user._id.toString())) {
+        throw new ApiError(403, "Not authorized to cancel this appointment");
+      }
+
+      appt.status = "Cancelled";
+      appt.cancelledSlotInfo = {
+        date: appt.timeSlot.date,
+        startTime: appt.timeSlot.startTime,
+        endTime: appt.timeSlot.endTime,
+      };
+      await appt.save({ session });
+
+      // Delete the timeslot
+      await TimeSlot.deleteOne({ _id: appt.timeSlot._id }, { session });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json(new ApiResponse(200, "Appointments cancelled and slots freed"));
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
+  }
 });
 
 export {createAppointment, getAllAppointments, cancelAppointment};

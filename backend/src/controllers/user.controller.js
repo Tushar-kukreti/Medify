@@ -14,7 +14,6 @@ const cookieOptions = {
   sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
   maxAge: COOKIE_MAX_AGE,
 };
-console.log("Cookie Options : ", cookieOptions);
 
 const generateTokens = async(userId)=>{
     try{
@@ -31,9 +30,6 @@ const generateTokens = async(userId)=>{
 
 const refreshAccessToken = asyncHandler(async(req, res)=>{
     const incommingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
-    console.log("Incomming Refresh Token : ", incommingRefreshToken);
-    console.log('cookies : ', req.cookies);
-    console.log('headers : ', req.headers);
     if (!incommingRefreshToken) throw new ApiError(401, "Refresh Token not found");
 
     try{
@@ -98,7 +94,7 @@ const registerUser = asyncHandler(async (req, res) => {
         role = (!role?.trim()) ? "user" : role?.trim();
         specialization = specialization?.trim()?.toLowerCase();
 
-        console.log("fullName : ", fullName, " userName : ", userName, " email : ", email, date_of_birth);
+        // console.log("fullName : ", fullName, " userName : ", userName, " email : ", email, date_of_birth);
         if ([fullName, email, userName, password, gender].some(
             (field)=> (field == undefined || field === "")))throw new ApiError(400, "Missing User Details");
     
@@ -129,7 +125,7 @@ const registerUser = asyncHandler(async (req, res) => {
                 throw new ApiError(400, "Years of expirence is a required Field for doctors")
             if (!specialization) throw new ApiError(400, "Specialization is a required Field for doctors");
             if (!groupId) throw new ApiError(400, "GroupId is a required Field for doctors");
-            console.log("specialization : ", specialization, " groupId : ", groupId, SPECIALIZATION_TO_GROUPID[specialization]);
+            // console.log("specialization : ", specialization, " groupId : ", groupId, SPECIALIZATION_TO_GROUPID[specialization]);
             if (SPECIALIZATION_TO_GROUPID[specialization]?.toString() !== groupId.toString()) {
             throw new ApiError(400, "MISMATCHED SPECIALIZATION AND GROUP ID");
             }
@@ -200,9 +196,9 @@ const logInUser = asyncHandler(async (req, res) => {
     const passwordMatch = await user.checkPassword(password);
     if (!passwordMatch) throw new ApiError(401, "Incorrect Password");
 
-    console.log(email, password, user._id);
+    // console.log(email, password, user._id);
     const {refreshToken, accessToken} = await generateTokens(user._id);
-    console.log(refreshToken, accessToken);
+    // console.log(refreshToken, accessToken);
     const LoggedInUser = await User.findById(user._id).select("-password -refreshToken");
 
     return res
@@ -260,19 +256,18 @@ const changePassword = asyncHandler(async (req, res) => {
 })
 
 const updateDetails = asyncHandler(async (req, res) => {
-    let {fullName, userName, email, gender, weight, height, dietary_preference,
-        description, date_of_birth} = req.body;
+    let {fullName, gender, weight, height, dietary_preference,
+        contact_number, description, date_of_birth} = req.body;
     
-    const fields = {fullName, userName, email, gender, weight, height, dietary_preference,
+    const fields = {fullName, contact_number, gender, weight, height, dietary_preference,
         description, date_of_birth};
 
-    console.log("fullname : ", fullName, " username : ", userName);
+    console.log("fullname : ", fullName);
     let changedFields = {};
     for (let key in fields){
         if (!fields[key]) continue;
         changedFields[key] = fields[key];
         if (typeof fields[key] === 'string') changedFields[key] = fields[key].trim();
-        if (key === 'email' || key === 'userName') changedFields[key] = changedFields[key].toLowerCase();
     }
 
     if (Object.keys(changedFields).length === 0) throw new ApiError(400, "No Fields are provided for update")
@@ -353,7 +348,6 @@ const listDoctors = asyncHandler(async (req, res) => {
 
 const searchDoctor = asyncHandler(async (req, res) => {
     const doctorId = req.query?.id?.trim();
-    console.log("Doctor id : ", doctorId);
     if (!doctorId || doctorId === '') throw new ApiError(400, "Invalid Doctor Id");
 
     const doctor = await User.findById(doctorId).select("-password -refreshToken -__v");

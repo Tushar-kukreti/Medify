@@ -41,6 +41,8 @@ const findJustBeforeSlotIndex = (slots, newEnd) => {
 const createTimeSlot = asyncHandler(async (req, res) => {
   const { date, slots } = req.body;
 
+  console.log("Received date:", date);
+  console.log("Received slots:", slots);
   if (!date || isNaN(new Date(date))) throw new ApiError(400, "Invalid Date");
   if (!slots || !Array.isArray(slots) || slots.length === 0)
     throw new ApiError(400, "Invalid/Empty Slots");
@@ -121,6 +123,33 @@ const createTimeSlot = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, `${created.length} unique time slot(s) added successfully`, nonOverlappingSlots));
 });
 
+// DELETE /timeslots/:id
+const deleteTimeSlot = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid time‐slot ID");
+  }
+
+  // Find the slot
+  const slot = await TimeSlot.findById(id);
+  if (!slot) {
+    throw new ApiError(404, "Time‐slot not found");
+  }
+
+  // Only the owning doctor can delete
+  if (slot.doctor.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "Not authorized to delete this slot");
+  }
+  if (slot.isBooked) {
+    throw new ApiError(400, "Cannot delete a booked slot");
+  }
+
+  await slot.deleteOne();
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Time‐slot deleted successfully", { id }));
+});
+
 const getTimeSlots = asyncHandler(async (req, res) => {
   const date = req?.query?.date?.trim();
   const doctorId = req?.query?.doctorId;
@@ -151,4 +180,4 @@ const getTimeSlots = asyncHandler(async (req, res) => {
 const updateSlot = asyncHandler(async (req, res) => {
   
 })
-export { createTimeSlot, getTimeSlots};
+export { createTimeSlot, getTimeSlots, deleteTimeSlot};
